@@ -33,7 +33,7 @@ class Forecasts::FetchService
     }
 
     Rails.cache.write(
-      forecast_cache_key_from_coordinates(geo[:latitude], geo[:longitude]),
+      CacheHelper.forecast_cache_key(geo[:latitude], geo[:longitude]),
       result.except(:from_cache),
       expires_in: CACHE_EXPIRATION
     )
@@ -44,7 +44,7 @@ class Forecasts::FetchService
   private
 
   def fetch_geocoding
-    Rails.cache.fetch(geocode_cache_key_from_location(@location), expires_in: CACHE_EXPIRATION) do
+    Rails.cache.fetch(CacheHelper.geocode_cache_key(@location), expires_in: CACHE_EXPIRATION) do
       GeocodingService.call(@location)
     end
   end
@@ -56,24 +56,12 @@ class Forecasts::FetchService
     )
   end
 
-  def forecast_cache_key_from_coordinates(latitude, longitude)
-    lat = format("%.4f", latitude)
-    lon = format("%.4f", longitude)
-
-    "forecast:#{lat}:#{lon}"
-  end
-
   def fetch_cached_forecast(geo)
     cached_data = Rails.cache.read(
-      forecast_cache_key_from_coordinates(geo[:latitude], geo[:longitude])
+      CacheHelper.forecast_cache_key(geo[:latitude], geo[:longitude])
     )
 
     cached_data&.merge(from_cache: true)
-  end
-
-  def geocode_cache_key_from_location(location)
-    normalized_location = location.to_s.strip.downcase
-    "geocode:#{normalized_location}"
   end
 
   def error_response(message)
