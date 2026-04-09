@@ -9,12 +9,13 @@ class Forecasts::FetchService
 
   def call
     geo = GeocodingService.call(@location)
+
+    return { success: false, error: geo[:error] } unless geo[:success]
+
     weather = WeatherService.call(
       latitude: geo[:latitude],
       longitude: geo[:longitude]
     )
-
-    return { success: false, error: "Location not found" } unless geo[:success] && weather[:success]
 
     {
       location_query: @location,

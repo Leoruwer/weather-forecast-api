@@ -22,8 +22,6 @@ class WeatherService
 
     body = JSON.parse(response.body)
 
-    return { success: false, error: "Location not found" } unless body
-
     {
       current_temperature: body.dig("current", "temperature_2m"),
       high_temperature: body.dig("daily", "temperature_2m_max", 0),
