@@ -1,6 +1,6 @@
 class Api::ForecastsController < ApplicationController
   def index
-    location = params[:location]
+    location = params[:name]
 
     return render json: { error: "Location parameter is required" }, status: :bad_request if location.blank?
 
