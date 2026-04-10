@@ -20,6 +20,8 @@ class WeatherService
       forecast_days: 8
     })
 
+    return { success: false, error: "Failed to fetch weather data" } unless response.success?
+
     body = JSON.parse(response.body)
 
     {
