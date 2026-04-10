@@ -10,11 +10,11 @@ RSpec.describe "Api::Forecasts", type: :request do
       allow(Forecasts::FetchService).to receive(:call).and_call_original
     end
 
-    subject { get "/api/forecasts", params: params }
+    subject { get "/api/forecasts", params: geo_params }
 
     let(:geocoding_api_response) { {} }
     let(:weather_api_response) { {} }
-    let(:params) { {} }
+    let(:geo_params) { {} }
     let(:weather_params) { {} }
 
     context "with valid location" do
@@ -64,7 +64,7 @@ RSpec.describe "Api::Forecasts", type: :request do
       end
 
       context "when location is zip code" do
-        let(:params) { { name: "10001" } }
+        let(:geo_params) { { name: "10001" } }
 
         it "returns status ok" do
           subject
@@ -116,7 +116,7 @@ RSpec.describe "Api::Forecasts", type: :request do
       end
 
       context "when location is city name" do
-        let(:params) { { name: "New York" } }
+        let(:geo_params) { { name: "New York" } }
 
         it "returns status ok" do
           subject
@@ -180,7 +180,7 @@ RSpec.describe "Api::Forecasts", type: :request do
         }
       end
 
-      let(:params) { { name: "Invalid Location" } }
+      let(:geo_params) { { name: "Invalid Location" } }
 
       it "returns status bad request" do
         subject
@@ -200,7 +200,7 @@ RSpec.describe "Api::Forecasts", type: :request do
     end
 
     context "when location parameter is missing" do
-      let(:params) { {} }
+      let(:geo_params) { {} }
 
       it "returns status bad request" do
         subject
@@ -224,7 +224,7 @@ RSpec.describe "Api::Forecasts", type: :request do
         allow(Forecasts::FetchService).to receive(:call).and_raise(StandardError.new("Something went wrong"))
       end
 
-      let(:params) { { name: "10001" } }
+      let(:geo_params) { { name: "10001" } }
 
       it "returns error message" do
         expect { subject }.to raise_error(StandardError, "Something went wrong")
