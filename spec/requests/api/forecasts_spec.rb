@@ -194,7 +194,7 @@ RSpec.describe "Api::Forecasts", type: :request do
         body = JSON.parse(response.body)
 
         expect(body).to include(
-          "error" => "Location not found"
+          "error" => "Failed to fetch geocode data"
         )
       end
     end
