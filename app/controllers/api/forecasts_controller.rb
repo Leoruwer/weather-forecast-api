@@ -1,10 +1,10 @@
 class Api::ForecastsController < ApplicationController
   def index
-    location = params[:name]
+    name = params[:name]
 
-    return render json: { error: "Location parameter is required" }, status: :bad_request if location.blank?
+    return render json: { error: "Name parameter is required" }, status: :bad_request if name.blank?
 
-    result = Forecasts::FetchService.call(location)
+    result = Forecasts::FetchService.call(name)
 
     return render json: ForecastSerializer.new(result).as_json, status: :ok if result[:success]
     render json: { error: result[:error] }, status: :bad_request

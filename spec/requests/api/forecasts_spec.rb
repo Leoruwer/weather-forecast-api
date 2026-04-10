@@ -199,7 +199,7 @@ RSpec.describe "Api::Forecasts", type: :request do
       end
     end
 
-    context "when location parameter is missing" do
+    context "when name parameter is missing" do
       let(:geo_params) { {} }
 
       it "returns status bad request" do
@@ -214,7 +214,7 @@ RSpec.describe "Api::Forecasts", type: :request do
         body = JSON.parse(response.body)
 
         expect(body).to include(
-          "error" => "Location parameter is required"
+          "error" => "Name parameter is required"
         )
       end
     end
