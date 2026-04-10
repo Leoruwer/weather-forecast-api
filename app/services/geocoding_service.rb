@@ -12,6 +12,8 @@ class GeocodingService
   def call
     response = Faraday.get(BASE_URL, request_params)
 
+    return { success: false, error: "Failed to fetch geocode data" } unless response.success?
+
     body = JSON.parse(response.body)
     result = body["results"]&.first
 
