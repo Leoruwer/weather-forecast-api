@@ -64,8 +64,6 @@ RSpec.describe GeocodingService do
       end
 
       it "returns an error message" do
-        debugger
-
         expect(subject).to eq({ success: false, error: "Location not found" })
       end
     end
