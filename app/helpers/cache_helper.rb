@@ -4,7 +4,7 @@ module CacheHelper
     "geocode:#{normalized_location}"
   end
 
-  def self.forecast_cache_key(latitude, longitude)
+  def self.weather_cache_key(latitude, longitude)
     lat = format("%.4f", latitude)
     lon = format("%.4f", longitude)
 

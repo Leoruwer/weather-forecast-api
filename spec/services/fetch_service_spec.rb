@@ -37,12 +37,16 @@ RSpec.describe Forecasts::FetchService do
       }
     end
 
-    let(:forecast_cache_key) do
-      CacheHelper.forecast_cache_key(
+    let(:weather_cache_key) do
+      CacheHelper.weather_cache_key(
         geocoding_response[:latitude],
         geocoding_response[:longitude]
       )
     end
+
+    let(:geocode_cache_key) {
+      CacheHelper.geocode_cache_key(params)
+    }
 
     let(:cached_data) do
       {
@@ -93,28 +97,51 @@ RSpec.describe Forecasts::FetchService do
         )
       end
 
-      it "writes combined data to cache" do
+      it "writes geocoding and weather data to cache" do
         subject
 
         expect(Rails.cache).to have_received(:write).with(
-          forecast_cache_key,
-          {
-            location_query: "10001",
-            location_name: "New York, United States",
-            latitude: 40.7128,
-            longitude: -74.0060,
-            current_temperature: 23,
-            high_temperature: 30,
-            low_temperature: 15,
-            extended_forecast: [
-              { date: "2026-04-10", high_temperature: 31, low_temperature: 16 },
-              { date: "2026-04-11", high_temperature: 32, low_temperature: 17 },
-              { date: "2026-04-12", high_temperature: 33, low_temperature: 18 }
-            ],
-            success: true
-          },
-          expires_in: described_class::CACHE_EXPIRATION
+          geocode_cache_key,
+          geocoding_response,
+          expires_in: Forecasts::FetchService::CACHE_EXPIRATION
         )
+
+        expect(Rails.cache).to have_received(:write).with(
+          weather_cache_key,
+          weather_response,
+          expires_in: Forecasts::FetchService::CACHE_EXPIRATION
+        )
+      end
+    end
+
+    context "when no cache exists" do
+      it "calls the weather service twice" do
+        expect(GeocodingService).to receive(:call).twice
+        expect(WeatherService).to receive(:call).twice
+        expect(Rails.cache).to receive(:write).exactly(4).times
+        expect(Rails.cache).to receive(:read).exactly(4).times
+
+        described_class.call("10001")
+        described_class.call("10002")
+      end
+    end
+
+    context "when cache exists" do
+      let(:params) { "10001" }
+
+      before do
+        allow(Rails.cache).to receive(:read).with(geocode_cache_key).and_return(nil, geocoding_response)
+        allow(Rails.cache).to receive(:read).with(weather_cache_key).and_return(nil, weather_response)
+      end
+
+      it "calls the weather service only once for the same location" do
+        expect(GeocodingService).to receive(:call).once
+        expect(WeatherService).to receive(:call).once
+        expect(Rails.cache).to receive(:write).twice
+        expect(Rails.cache).to receive(:read).exactly(4).times
+
+        described_class.call("10001")
+        described_class.call("10001")
       end
     end
 
@@ -122,7 +149,7 @@ RSpec.describe Forecasts::FetchService do
       let(:params) { "10001" }
 
       before do
-        allow(Rails.cache).to receive(:read).with(forecast_cache_key).and_return(cached_data)
+        allow(Rails.cache).to receive(:read).with(weather_cache_key).and_return(cached_data)
       end
 
       it "returns cached forecast" do
@@ -184,7 +211,7 @@ RSpec.describe Forecasts::FetchService do
       it "does not write to cache" do
         subject
 
-        expect(Rails.cache).not_to have_received(:write)
+        expect(Rails.cache).to have_received(:write).once
       end
     end
   end

@@ -11,28 +11,17 @@ class Forecasts::FetchService
 
   def call
     geo = fetch_geocoding
-    return error_response(geo[:error]) unless geo[:success]
+    return error_response(geo[:data][:error]) unless geo[:data][:success]
 
-    cached_forecast = fetch_cached_forecast(geo)
-    return cached_forecast if cached_forecast
+    weather = fetch_weather(geo[:data])
+    return error_response(weather[:data][:error]) unless weather[:data][:success]
 
-    weather = fetch_weather(geo)
-    return error_response(weather[:error]) unless weather[:success]
-
-    result = build_response(geo, weather)
-
-    Rails.cache.write(
-      CacheHelper.forecast_cache_key(geo[:latitude], geo[:longitude]),
-      result.except(:from_cache),
-      expires_in: CACHE_EXPIRATION
-    )
-
-    result
+    build_response(geo[:data], weather[:data], geo[:from_cache] || weather[:from_cache])
   end
 
   private
 
-  def build_response(geo, weather)
+  def build_response(geo, weather, from_cache)
     {
       location_query: @location,
       location_name: [ geo[:name], geo[:country] ].compact.join(", "),
@@ -42,30 +31,39 @@ class Forecasts::FetchService
       high_temperature: weather[:high_temperature],
       low_temperature: weather[:low_temperature],
       extended_forecast: weather[:extended_forecast],
-      from_cache: false,
+      from_cache: from_cache,
       success: true
     }
   end
 
   def fetch_geocoding
-    Rails.cache.fetch(CacheHelper.geocode_cache_key(@location), expires_in: CACHE_EXPIRATION) do
-      GeocodingService.call(@location)
+    cache_key = CacheHelper.geocode_cache_key(@location)
+
+    cached_response = Rails.cache.read(cache_key)
+    return { data: cached_response, from_cache: true } if cached_response
+
+    result = GeocodingService.call(@location)
+
+    if result[:success]
+      Rails.cache.write(cache_key, result, expires_in: CACHE_EXPIRATION)
     end
+
+    { data: result, from_cache: false }
   end
 
   def fetch_weather(geo)
-    WeatherService.call(
-      latitude: geo[:latitude],
-      longitude: geo[:longitude]
-    )
-  end
+    cache_key = CacheHelper.weather_cache_key(geo[:latitude], geo[:longitude])
 
-  def fetch_cached_forecast(geo)
-    cached_data = Rails.cache.read(
-      CacheHelper.forecast_cache_key(geo[:latitude], geo[:longitude])
-    )
+    cached_response = Rails.cache.read(cache_key)
+    return { data: cached_response, from_cache: true } if cached_response
 
-    cached_data&.merge(from_cache: true)
+    result = WeatherService.call(latitude: geo[:latitude], longitude: geo[:longitude])
+
+    if result[:success]
+      Rails.cache.write(cache_key, result, expires_in: CACHE_EXPIRATION)
+    end
+
+    { data: result, from_cache: false }
   end
 
   def error_response(message)
